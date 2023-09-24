@@ -60,6 +60,7 @@ const TopUsers = (props: any) => (
                   const ret = await subgraphGet('chart', 0, item.subject);
                   console.log('chart', ret.data.data.trades);
                   props.setChart(ret.data.data.trades);
+                  props.setSelected(item.subject);
                   props.setChartLoading(false);
                 }}
                 key={item.id}>
@@ -94,7 +95,10 @@ const TopUsers = (props: any) => (
 // Price Chart Component
 const PriceChart = (props: any) => (
   <div className="p-4 border rounded shadow relative">
-    <h2 className="text-lg font-semibold mb-2">Price Chart</h2>
+    <div className="flex justify-between items-center mb-2">
+      <h2 className="text-lg font-semibold">Price Chart</h2>
+      <span className="text-gray-500 text-sm self-center">{props.selected}</span>
+    </div>
     {props.loading && (
       <div style={{
         position: 'absolute',
@@ -114,7 +118,7 @@ const PriceChart = (props: any) => (
         data={props.chart.length > 0 ? props.chart.map((item: any) => ({
           name: new Date(item.blockTimestamp * 1000).toLocaleString().split(',')[0].trim(),
           price: Number((item.ethAmount / 1e18).toFixed(8)),
-        })) : []}
+        })).reverse() : data}
         margin={{
           top: 5,
           right: 30,
@@ -187,7 +191,10 @@ const Newers = (props: any) => (
 // Trade History Component
 const TradeHistory = (props: any) => (
   <div className="p-4 border rounded shadow">
-    <h2 className="text-lg font-semibold mb-2">Trade History</h2>
+    <div className="flex justify-between items-center mb-2">
+      <h2 className="text-lg font-semibold">Trade History</h2>
+      <span className="text-gray-500 text-sm self-center">(Click address for Chart)</span>
+    </div>
     <div className="overflow-x-auto">
       <table className="min-w-full border rounded shadow text-xs md:table">
         <thead className="md:table-header-group">
@@ -213,14 +220,38 @@ const TradeHistory = (props: any) => (
                 <td className="p-2 md:table-cell text-left">
                   <div>{item.isBuy ? 'Buy' : 'Sell'}</div>
                 </td>
-                <td className="p-2 md:table-cell text-left">
+                <td className="p-2 md:table-cell text-left cursor-pointer" 
+                  onClick={async () => {
+                    props.setChartLoading(true);
+                    console.log('Row clicked', item.subject);
+                    const ret = await subgraphGet('chart', 0, item.subject);
+                    console.log('chart', ret.data.data.trades);
+                    props.setChart(ret.data.data.trades);
+                    props.setSelected(item.subject);
+                    props.setChartLoading(false);
+                  }}
+                >
+                {item.subject.slice(0,6) + '...' + item.subject.slice(-4)}
+                  &nbsp;
                   <a href={`https://basescan.org/address/${item.subject}`} target="_blank" rel="noopener noreferrer">
-                    {item.subject.slice(0,6) + '...' + item.subject.slice(-4)}
+                    🔗
                   </a>
                 </td>
-                <td className="p-2 md:table-cell text-left">
+                <td className="p-2 md:table-cell text-left cursor-pointer" 
+                  onClick={async () => {
+                    props.setChartLoading(true);
+                    console.log('Row clicked', item.trader);
+                    const ret = await subgraphGet('chart', 0, item.trader);
+                    console.log('chart', ret.data.data.trades);
+                    props.setChart(ret.data.data.trades);
+                    props.setSelected(item.trader);
+                    props.setChartLoading(false);
+                  }}
+                >
+                {item.trader.slice(0,6) + '...' + item.trader.slice(-4)}
+                  &nbsp;
                   <a href={`https://basescan.org/address/${item.trader}`} target="_blank" rel="noopener noreferrer">
-                    {item.trader.slice(0,6) + '...' + item.trader.slice(-4)}
+                    🔗
                   </a>
                 </td>
                 <td className="p-2 md:table-cell text-left">
@@ -228,7 +259,7 @@ const TradeHistory = (props: any) => (
                 </td>
                 <td className="p-2 md:table-cell text-left">
                   <a href={`https://basescan.org/tx/${item.transactionHash}`} target="_blank" rel="noopener noreferrer">
-                    {item.transactionHash.slice(0,12) + '...' + item.transactionHash.slice(-8)}
+                    {item.transactionHash.slice(0,12) + '...' + item.transactionHash.slice(-8)} 🔗
                   </a>
                 </td>
                 <td className="p-2 md:table-cell text-left">
@@ -256,6 +287,7 @@ const Home = () => {
   const [top, setTop] = useState([]);
   const [newers, setNewers] = useState([]);
   const [chart, setChart] = useState([]);
+  const [selected, setSelected] = useState('');
   const [chartLoading, setChartLoading] = useState(false);
   useEffect(() => {
     // 定义一个获取数据的函数
@@ -290,11 +322,11 @@ const Home = () => {
     <Header />
     <div className="container mx-auto p-4">
       <div className="grid md:grid-cols-[1fr,2fr,1fr] gap-4 mb-4">
-        <TopUsers top={top} setChart={setChart} setChartLoading={setChartLoading} />
-        <PriceChart chart={chart} loading={chartLoading} />
+        <TopUsers top={top} setChart={setChart} setChartLoading={setChartLoading} setSelected={setSelected} />
+        <PriceChart chart={chart} loading={chartLoading} selected={selected} />
         <Newers newers={newers} />
       </div>
-      <TradeHistory history={history} />
+      <TradeHistory history={history} setChartLoading={setChartLoading} setChart={setChart} setSelected={setSelected}  />
     </div>
   </div>
 }
