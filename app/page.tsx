@@ -267,7 +267,7 @@ const TradeHistory = (props: any) => (
                     className="bg-blue-500 text-white px-2 py-1 rounded"
                     onClick={() => console.log('Operation button clicked')}
                   >
-                    {item.isBuy ? 'Buy' : 'Sell'}
+                    Buy
                   </button>
                 </td>
               </tr>
