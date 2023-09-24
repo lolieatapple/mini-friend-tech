@@ -264,10 +264,16 @@ const TradeHistory = (props: any) => (
                 </td>
                 <td className="p-2 md:table-cell text-left">
                   <button 
+                    className="bg-blue-500 text-white px-2 py-1 rounded mr-2"
+                    onClick={() => console.log('Operation button clicked')}
+                  >
+                    Buy Owner
+                  </button>
+                  <button 
                     className="bg-blue-500 text-white px-2 py-1 rounded"
                     onClick={() => console.log('Operation button clicked')}
                   >
-                    Buy
+                    Buy Trader
                   </button>
                 </td>
               </tr>
