@@ -1,113 +1,370 @@
-import Image from 'next/image'
+'use client';
 
-export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+import React, { useEffect, useState } from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts';
+import axios from 'axios';
+
+// 示例数据
+const data = [
+  { name: 'Jan', price: 4.000 },
+  { name: 'Feb', price: 3.000 },
+  { name: 'Mar', price: 2.000 },
+  { name: 'Apr', price: 2.780 },
+  { name: 'May', price: 1.890 },
+  { name: 'Jun', price: 2.390 },
+  { name: 'Jul', price: 3.490 },
+];
+
+// Header Component
+const Header = () => (
+  <div className="flex justify-between items-center p-4 bg-blue-500 text-white">
+    <div className="flex items-center">
+      <img src="logo.png" alt="Logo" className="h-8 w-8 mr-2" />
+      <span>Friend.tech Analytics</span>
+    </div>
+    <button className="bg-white text-blue-500 px-4 py-2 rounded">Connect Wallet</button>
+  </div>
+);
+
+// Top Users Component
+const TopUsers = (props: any) => (
+  <div className="p-4 border rounded shadow">
+    <div className="flex justify-between items-center mb-2">
+      <h2 className="text-lg font-semibold">Top Users</h2>
+      <span className="text-gray-500 text-sm self-center">(Click for Chart)</span>
+    </div>
+    <div style={{maxHeight: '350px', overflowY: 'auto'}}>
+    <table className="min-w-full border rounded shadow text-xs">
+      <thead>
+        <tr className="border-gray-300 border-b">
+          <th className="p-1 text-center">Address</th>
+          <th className="p-1 text-center">Price (ETH)</th>
+          <th className="p-1 text-center">Operation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          props.top.map((item: any, index: number) => (
+            <tr className="h-8 border-gray-300 border-b cursor-pointer hover:bg-gray-200"
+                onClick={async () => {
+                  props.setChartLoading(true);
+                  console.log('Row clicked', item.subject);
+                  const ret = await subgraphGet('chart', 0, item.subject);
+                  console.log('chart', ret.data.data.trades);
+                  props.setChart(ret.data.data.trades);
+                  props.setChartLoading(false);
+                }}
+                key={item.id}>
+              <td className="p-1 text-center">
+              {item.subject.slice(0,6) + '...' + item.subject.slice(-4)}&nbsp; 
+                <a href={`https://basescan.org/address/${item.subject}`} target="_blank" rel="noopener noreferrer">
+                 🔗
+                </a>
+              </td>
+              <td className="p-1 text-center">{Number((item.ethAmount / 1e18).toFixed(8))}</td>
+              <td className="p-1 text-center">
+                <button 
+                  className="bg-blue-500 text-white px-2 py-1 rounded"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('Buy button clicked', item.subject);
+                  }}
+                >
+                  Buy
+                </button>
+              </td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+    </div>
+    
+  </div>
+);
+
+// Price Chart Component
+const PriceChart = (props: any) => (
+  <div className="p-4 border rounded shadow relative">
+    <h2 className="text-lg font-semibold mb-2">Price Chart</h2>
+    {props.loading && (
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        border: '16px solid #100f0f',
+        borderTop: '16px solid #3498db',
+        borderRadius: '50%',
+        width: '50px',
+        height: '50px',
+        animation: 'spin 2s linear infinite'
+      }}/>
+    )}
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart
+        data={props.chart.length > 0 ? props.chart.map((item: any) => ({
+          name: new Date(item.blockTimestamp * 1000).toLocaleString().split(',')[0].trim(),
+          price: Number((item.ethAmount / 1e18).toFixed(8)),
+        })) : []}
+        margin={{
+          top: 5,
+          right: 30,
+          left: 20,
+          bottom: 5,
+        }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Line type="linear" dataKey="price" stroke="#8884d8" activeDot={{ r: 8 }} />
+      </LineChart>
+    </ResponsiveContainer>
+    <style jsx>{`
+      @keyframes spin {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
+      }
+    `}</style>
+  </div>
+);
+
+// Newers Component
+const Newers = (props: any) => (
+  <div className="p-4 border rounded shadow">
+    <div className="flex justify-between items-center mb-2">
+      <h2 className="text-lg font-semibold">New Users</h2>
+      {/* <span className="text-gray-500 text-sm self-center">(Click for Chart)</span> */}
+    </div>
+    <table className="min-w-full border rounded shadow text-xs">
+      <thead>
+        <tr className="border-gray-300 border-b">
+          <th className="p-1 text-center">Address</th>
+          <th className="p-1 text-center">Operation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          props.newers.map((item: any, index: number) => (
+            <tr className="h-8 border-gray-300 border-b cursor-pointer hover:bg-gray-200"
+                onClick={() => console.log('Row clicked')}
+                key={item.id}>
+              <td className="p-1 text-center">
+                {item.subject.slice(0,6) + '...' + item.subject.slice(-4)}&nbsp; 
+
+                <a href={`https://basescan.org/address/${item.subject}`} target="_blank" rel="noopener noreferrer">
+                  🔗
+                </a>
+              </td>
+              <td className="p-1 text-center">
+                <button 
+                  className="bg-blue-500 text-white px-2 py-1 rounded"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('Buy button clicked');
+                  }}
+                >
+                  Buy
+                </button>
+              </td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+);
+
+// Trade History Component
+const TradeHistory = (props: any) => (
+  <div className="p-4 border rounded shadow">
+    <h2 className="text-lg font-semibold mb-2">Trade History</h2>
+    <div className="overflow-x-auto">
+      <table className="min-w-full border rounded shadow text-xs md:table">
+        <thead className="md:table-header-group">
+          <tr className="border-gray-300 border-b">
+            <th className="p-2 text-left">Time</th>
+            <th className="p-2 text-left">Type</th>
+            <th className="p-2 text-left">Owner</th>
+            <th className="p-2 text-left">Trader</th>
+            <th className="p-2 text-left">Price (ETH)</th>
+            <th className="p-2 text-left">TxHash</th>
+            <th className="p-2 text-left">Operation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            props.history.map((item: any, index: number) => (
+              <tr 
+                className={`border-gray-300 border-b md:table-row hover:bg-gray-200 ${item.isBuy ? 'bg-green-100' : 'bg-red-100'}`}  
+                key={item.id}>
+                <td className="p-2 md:table-cell text-left">
+                  <div>{new Date(item.blockTimestamp * 1000).toLocaleString()}</div>
+                </td>
+                <td className="p-2 md:table-cell text-left">
+                  <div>{item.isBuy ? 'Buy' : 'Sell'}</div>
+                </td>
+                <td className="p-2 md:table-cell text-left">
+                  <a href={`https://basescan.org/address/${item.subject}`} target="_blank" rel="noopener noreferrer">
+                    {item.subject.slice(0,6) + '...' + item.subject.slice(-4)}
+                  </a>
+                </td>
+                <td className="p-2 md:table-cell text-left">
+                  <a href={`https://basescan.org/address/${item.trader}`} target="_blank" rel="noopener noreferrer">
+                    {item.trader.slice(0,6) + '...' + item.trader.slice(-4)}
+                  </a>
+                </td>
+                <td className="p-2 md:table-cell text-left">
+                  <div>{Number((item.ethAmount / 1e18).toFixed(8))}</div>
+                </td>
+                <td className="p-2 md:table-cell text-left">
+                  <a href={`https://basescan.org/tx/${item.transactionHash}`} target="_blank" rel="noopener noreferrer">
+                    {item.transactionHash.slice(0,12) + '...' + item.transactionHash.slice(-8)}
+                  </a>
+                </td>
+                <td className="p-2 md:table-cell text-left">
+                  <button 
+                    className="bg-blue-500 text-white px-2 py-1 rounded"
+                    onClick={() => console.log('Operation button clicked')}
+                  >
+                    {item.isBuy ? 'Buy' : 'Sell'}
+                  </button>
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+
+
+// Main Home Component
+const Home = () => {
+  const [history, setHistory] = useState([]);
+  const [top, setTop] = useState([]);
+  const [newers, setNewers] = useState([]);
+  const [chart, setChart] = useState([]);
+  const [chartLoading, setChartLoading] = useState(false);
+  useEffect(() => {
+    // 定义一个获取数据的函数
+    const fetchData = () => {
+      // 替换为实际的subgraphGet函数调用
+      subgraphGet('history', 0).then((ret) => {
+        console.log('flush history', ret.data.data.trades.length);
+        setHistory(ret.data.data.trades);
+      }).catch(console.error);
+
+      subgraphGet('top', 0).then((ret) => {
+        console.log('flush top', ret.data.data.trades.length);
+        setTop(ret.data.data.trades);
+      }).catch(console.error);
+
+      subgraphGet('newers', 0).then((ret) => {
+        console.log('flush newers', ret.data.data.trades.length);
+        setNewers(ret.data.data.trades);
+      }).catch(console.error);
+    };
+    
+    // 首次渲染时立即获取数据
+    fetchData();
+    
+    // 设置一个每隔10秒调用fetchData的定时器
+    const intervalId = setInterval(fetchData, 10000); // 10000毫秒 = 10秒
+    
+    // 当组件卸载时，清除定时器
+    return () => clearInterval(intervalId);
+  }, []);
+  return <div className="min-h-screen bg-gray-100">
+    <Header />
+    <div className="container mx-auto p-4">
+      <div className="grid md:grid-cols-[1fr,2fr,1fr] gap-4 mb-4">
+        <TopUsers top={top} setChart={setChart} setChartLoading={setChartLoading} />
+        <PriceChart chart={chart} loading={chartLoading} />
+        <Newers newers={newers} />
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+      <TradeHistory history={history} />
+    </div>
+  </div>
 }
+
+async function subgraphGet(name: string, page: number, addr: string = '') {
+  // 定义查询URL
+  const url = 'https://api.studio.thegraph.com/query/20058/friend-tech/v0.0.1';
+
+  let query = '';
+  switch(name) {
+    case 'history':
+      query = `
+      {
+        trades(orderBy: blockNumber, orderDirection: desc, first: 50, skip: ${page * 50}) {
+          id
+          trader
+          subject
+          isBuy
+          ethAmount
+          blockTimestamp
+          transactionHash
+        }
+      }
+      `;
+      break;
+    case 'top':
+      query = `
+      {
+        trades(orderBy: ethAmount, orderDirection: desc, first: 100) {
+          id
+          subject
+          ethAmount
+        }
+      }
+      `
+      break;
+    case 'newers':
+      query = `
+      {
+        trades(orderBy: blockTimestamp, orderDirection: desc, first: 10, where: {ethAmount: "0"}) {
+          id
+          trader
+          subject
+          isBuy
+          ethAmount
+          blockTimestamp
+          transactionHash
+        }
+      }
+      `
+      break;
+    case 'chart':
+      query = `
+      {
+        trades(orderBy: blockTimestamp, orderDirection: desc, first: 50, where: {subject: "${addr}"}) {
+          ethAmount
+          blockTimestamp
+        }
+      }
+      `
+      break;
+    default:
+      break;
+  }
+  // 定义查询字符串
+
+
+  // 使用axios.post发送查询
+  return await axios.post(url, { query });
+}
+
+
+export default Home;
