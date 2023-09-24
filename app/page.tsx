@@ -38,7 +38,7 @@ const Header = () => (
 const TopUsers = (props: any) => (
   <div className="p-4 border rounded shadow">
     <div className="flex justify-between items-center mb-2">
-      <h2 className="text-lg font-semibold">Top Users</h2>
+      <h2 className="text-lg font-semibold">Top 50 Users</h2>
       <span className="text-gray-500 text-sm self-center">(Click for Chart)</span>
     </div>
     <div style={{maxHeight: '350px', overflowY: 'auto'}}>
