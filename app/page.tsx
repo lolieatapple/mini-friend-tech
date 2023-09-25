@@ -14,6 +14,7 @@ import {
 import axios from "axios";
 import { ethers } from "ethers";
 import { SC_ABIS, SC_ADDR } from "./config";
+import Script from 'next/script';
 
 // 示例数据
 const data = [
@@ -639,6 +640,18 @@ const Home = () => {
       {showDialog && (
         <BuyDialog setShowDialog={setShowDialog} selected={selected} />
       )}
+      <div>
+      <Script src="https://www.googletagmanager.com/gtag/js?id=G_WB0CNNCQCM" />
+      <Script id="google-analytics">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+ 
+          gtag('config', 'G-WB0CNNCQCM');
+        `}
+      </Script>
+    </div>
     </div>
   );
 };
