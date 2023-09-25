@@ -12,10 +12,6 @@ import {
 } from 'recharts';
 import axios from 'axios';
 
-import { createChart } from 'lightweight-charts';
-
-
-
 // 示例数据
 const data = [
   { name: 'Jan', price: 4.000 },
@@ -27,59 +23,6 @@ const data = [
   { name: 'Jul', price: 3.490 },
 ];
 
-const TradingViewChart = (props: any) => {
-  const chartContainerRef = useRef();
-
-  useEffect(() => {
-    if (chartContainerRef.current) {
-      // 创建图表
-      const chart = createChart(chartContainerRef.current, { width: 400, height: 300 });
-      const candlestickSeries = chart.addCandlestickSeries();
-
-      // 假设原始数据存储在变量 rawData 中
-      const rawData = props.chart;
-      if (rawData.length === 0) {
-        return;
-      }
-
-      // 将原始数据按天分组
-      const groupedByDay = rawData.reduce((acc: any, trade: any) => {
-        const date = new Date(trade.blockTimestamp * 1000).toDateString(); // 将时间戳转换为日期字符串，忽略时间部分
-        if (!acc[date]) {
-          acc[date] = [];
-        }
-        acc[date].push(trade);
-        return acc;
-      }, {});
-
-      // 计算每天的蜡烛图数据
-      const candlestickData = Object.entries(groupedByDay).map(([date, trades]:[any, any]) => {
-        const prices = trades.map((trade: any) => Number(trade.ethAmount / 1e18)); // 计算每笔交易的价格
-        return {
-          time: new Date(date).getTime() / 1000, // 将日期字符串转回时间戳
-          open: prices[0],
-          close: prices[prices.length - 1],
-          high: Math.max(...prices),
-          low: Math.min(...prices),
-        };
-      });
-
-      console.log(candlestickData);
-
-      // candlestickSeries.setData(candlestickData as any);
-      // candlestickSeries.setData(props.chart as any);
-      // console.log('chart', props.chart);
-      const _data = props.chart.map((item: any) => ({
-        time: (new Date(item.blockTimestamp * 1000)).toISOString().split('T')[0],
-        value: Number((item.ethAmount / 1e18).toFixed(8)),
-      }));
-      console.log('_data', _data);
-      candlestickSeries.setData(_data as any);
-    }
-  }, [props.chart]);
-
-  return <div ref={chartContainerRef} />;
-};
 
 // Header Component
 const Header = () => (
