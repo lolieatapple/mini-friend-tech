@@ -452,21 +452,30 @@ const BuyDialog = (props: any) => {
         alert("Please install MetaMask first");
         return;
       }
-      // get account
+      // switch to base mainnet
       (window as any).ethereum
-        .request({ method: "eth_requestAccounts" })
-        .then((accounts: string[]) => {
-          console.log("accounts", accounts);
-          // get balance
-          const provider = new ethers.providers.Web3Provider(
-            (window as any).ethereum
-          );
-          const contract = new ethers.Contract(SC_ADDR, SC_ABIS, provider);
-          console.log("call", props.selected, quantity);
-          contract
-            .getBuyPriceAfterFee(props.selected, quantity)
-            .then((ret: any) => {
-              setPrice(Number((ret / 1e18).toFixed(8)).toString());
+        .request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: "0x2105" }],
+        })
+        .then(() => {
+          // get account
+          (window as any).ethereum
+            .request({ method: "eth_requestAccounts" })
+            .then((accounts: string[]) => {
+              console.log("accounts", accounts);
+              // get balance
+              const provider = new ethers.providers.Web3Provider(
+                (window as any).ethereum
+              );
+              const contract = new ethers.Contract(SC_ADDR, SC_ABIS, provider);
+              console.log("call", props.selected, quantity);
+              contract
+                .getBuyPriceAfterFee(props.selected, quantity)
+                .then((ret: any) => {
+                  setPrice(Number((ret / 1e18).toFixed(8)).toString());
+                })
+                .catch(console.error);
             })
             .catch(console.error);
         })
