@@ -11,6 +11,8 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import axios from 'axios';
+import { ethers } from 'ethers';
+import { SC_ABIS, SC_ADDR } from './config';
 
 // 示例数据
 const data = [
@@ -25,15 +27,71 @@ const data = [
 
 
 // Header Component
-const Header = () => (
-  <div className="flex justify-between items-center p-4 bg-blue-500 text-white">
-    <div className="flex items-center">
-      <img src="logo.png" alt="Logo" className="h-8 w-8 mr-2" />
-      <span>Friend.tech Analytics</span>
-    </div>
-    <button className="bg-white text-blue-500 px-4 py-2 rounded">Connect Wallet</button>
+const Header = (props: any) => {
+  const [search, setSearch] = useState('');
+  const [address, setAddress] = useState('');
+
+  const onSearch = async () => {
+    if (!ethers.utils.isAddress(search)) {
+      alert('Please input a valid address');
+      return;
+    }
+    props.setChartLoading(true);
+    const ret = await subgraphGet('chart', 0, search);
+    console.log('chart', ret.data.data.trades);
+    props.setChart(ret.data.data.trades);
+    props.setSelected(search);
+    props.setChartLoading(false);
+  }
+
+  useEffect(()=>{
+    if (ethers.utils.isAddress(search)) {
+      onSearch();
+    }
+  }, [search]);
+
+  return <div className="flex flex-wrap justify-between items-center p-4 bg-blue-500 text-white">
+  <div className="flex items-center mb-2 md:mb-0">
+    <img src="logo.png" alt="Logo" className="h-8 w-8 mr-2" />
+    <span>Friend.tech Analytics</span>
   </div>
-);
+  
+  {/* 添加搜索框和搜索按钮 */}
+  <div className="flex items-center w-full md:w-auto mb-2 md:mb-0 md:mr-4">
+    <input 
+      type="text" 
+      placeholder="Search by Address" 
+      className="px-3 py-2 rounded-l bg-white text-blue-500 w-full md:w-auto"
+      value={search}
+      onChange={(e) => {
+        setSearch(e.target.value);
+      }}
+    />
+    <button className="px-4 py-2 rounded-r bg-white text-blue-500"
+      onClick={onSearch}
+    >
+      Search
+    </button>
+  </div>
+  
+  <button className="bg-white text-blue-500 px-4 py-2 rounded w-full md:w-auto"
+    onClick={async () => {
+      if (!(window as any).ethereum) {
+        alert('Please install MetaMask first');
+        return;
+      }
+      const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+      setAddress(accounts[0]);
+      // switch to Base mainnet
+      (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+    }}
+  >
+    {
+      address ? address.slice(0, 6) + '...' + address.slice(-4) : 'Connect Wallet'
+    }
+    </button>
+</div>
+}
 
 // Top Users Component
 const TopUsers = (props: any) => (
@@ -78,6 +136,8 @@ const TopUsers = (props: any) => (
                   onClick={(e) => {
                     e.stopPropagation();
                     console.log('Buy button clicked', item.subject);
+                    props.setSelected(item.subject);
+                    props.setShowDialog(true);
                   }}
                 >
                   Buy
@@ -98,7 +158,20 @@ const PriceChart = (props: any) => (
   <div className="p-4 border rounded shadow relative">
     <div className="flex justify-between items-center mb-2">
       <h2 className="text-lg font-semibold">Price Chart</h2>
-      <span className="text-gray-500 text-sm self-center">{props.selected}</span>
+      <span className="text-gray-500 text-sm self-center">
+        {props.selected}&nbsp;
+        {
+          props.selected && <button 
+          className="bg-blue-500 text-white px-2 py-1 rounded"
+          onClick={(e) => {
+            e.stopPropagation();
+            props.setShowDialog(true);
+          }}
+        >
+          Buy
+        </button>
+        }
+        </span>
     </div>
     {props.loading && (
       <div style={{
@@ -177,6 +250,8 @@ const Newers = (props: any) => (
                   onClick={(e) => {
                     e.stopPropagation();
                     console.log('Buy button clicked');
+                    props.setSelected(item.subject);
+                    props.setShowDialog(true);
                   }}
                 >
                   Buy
@@ -267,13 +342,19 @@ const TradeHistory = (props: any) => (
                 <td className="p-2 md:table-cell text-left">
                   <button 
                     className="bg-blue-500 text-white px-2 py-1 rounded mr-2"
-                    onClick={() => console.log('Operation button clicked')}
+                    onClick={() => {
+                      props.setSelected(item.subject);
+                      props.setShowDialog(true);
+                    }}
                   >
                     Buy Owner
                   </button>
                   <button 
                     className="bg-blue-500 text-white px-2 py-1 rounded"
-                    onClick={() => console.log('Operation button clicked')}
+                    onClick={() => {
+                      props.setSelected(item.trader);
+                      props.setShowDialog(true);
+                    }}
                   >
                     Buy Trader
                   </button>
@@ -288,6 +369,90 @@ const TradeHistory = (props: any) => (
 );
 
 
+const BuyDialog = (props: any) => {
+  const [quantity, setQuantity] = useState('1');
+  const [price, setPrice] = useState('loading...');
+
+  useEffect(()=>{
+    if (ethers.utils.isAddress(props.selected)) {
+      // connect wallet
+      if (!(window as any).ethereum) {
+        alert('Please install MetaMask first');
+        return;
+      }
+      // get account
+      (window as any).ethereum.request({ method: 'eth_requestAccounts' }).then((accounts: string[]) => {
+        console.log('accounts', accounts);
+        // get balance
+        const provider = new ethers.providers.Web3Provider((window as any).ethereum);
+        const contract = new ethers.Contract(SC_ADDR, SC_ABIS, provider);
+        console.log('call', props.selected, quantity);
+        contract.getBuyPriceAfterFee(props.selected, quantity).then((ret: any) => {
+          setPrice(Number((ret / 1e18).toFixed(8)).toString());
+        }).catch(console.error);
+      }).catch(console.error);
+    }
+  }, [props.selected, quantity]);
+
+  return (
+    <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-700 bg-opacity-50">
+      <div className="bg-white p-4 rounded">
+        <h2 className="text-2xl mb-4">Buy Shares</h2>
+        <p className="mb-4">Share Address: {props.selected}</p>
+        <p className="mb-4">Share Price: {price} ETH</p>
+        <input 
+          type="number" 
+          value={quantity} 
+          onChange={(e) => setQuantity(e.target.value)} 
+          className="border mb-4 p-2 rounded"
+        />
+        <div className="flex justify-end">
+          <button 
+            className="bg-gray-300 px-4 py-2 rounded mr-2"
+            onClick={() => props.setShowDialog(false)}
+          >
+            Cancel
+          </button>
+          <button 
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+            onClick={async () => {
+              console.log('Confirmed', quantity);
+              props.setShowDialog(false);
+
+              if (!(window as any).ethereum) {
+                alert('Please install MetaMask first');
+                return;
+              }
+
+              try {
+                // get accounts
+                await (window as any).ethereum.request({ method: 'eth_requestAccounts' })
+                await (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+                // switch to base mainnet
+                // get signer
+                const provider = new ethers.providers.Web3Provider((window as any).ethereum);
+                const signer = provider.getSigner();
+                // get contract
+                const contract = new ethers.Contract(SC_ADDR, SC_ABIS, signer);
+                console.log('price', price, ethers.utils.parseEther(price).toNumber());
+                // call buyFriend
+                let tx = await contract.buyShares(props.selected, quantity, {
+                  value: ethers.utils.parseEther(price),
+                });
+                console.log('tx', tx);
+                alert('Transaction sent, please wait for confirmation');
+              } catch (error) {
+                console.error(error);
+              }
+            }}
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // Main Home Component
 const Home = () => {
@@ -297,6 +462,10 @@ const Home = () => {
   const [chart, setChart] = useState([]);
   const [selected, setSelected] = useState('');
   const [chartLoading, setChartLoading] = useState(false);
+
+  const [showDialog, setShowDialog] = useState(false);
+
+
   useEffect(() => {
     // 定义一个获取数据的函数
     const fetchData = () => {
@@ -327,15 +496,16 @@ const Home = () => {
     return () => clearInterval(intervalId);
   }, []);
   return <div className="min-h-screen bg-gray-100">
-    <Header />
+    <Header setChart={setChart} setChartLoading={setChartLoading} setSelected={setSelected} />
     <div className="container mx-auto p-4">
       <div className="grid md:grid-cols-[1fr,2fr,1fr] gap-4 mb-4">
-        <TopUsers top={top} setChart={setChart} setChartLoading={setChartLoading} setSelected={setSelected} />
-        <PriceChart chart={chart} loading={chartLoading} selected={selected} />
-        <Newers newers={newers} />
+        <TopUsers top={top} setChart={setChart} setChartLoading={setChartLoading} setSelected={setSelected} setShowDialog={setShowDialog} />
+        <PriceChart chart={chart} loading={chartLoading} selected={selected} setShowDialog={setShowDialog} />
+        <Newers newers={newers} setShowDialog={setShowDialog} setSelected={setSelected} />
       </div>
-      <TradeHistory history={history} setChartLoading={setChartLoading} setChart={setChart} setSelected={setSelected}  />
+      <TradeHistory history={history} setChartLoading={setChartLoading} setChart={setChart} setSelected={setSelected} setShowDialog={setShowDialog} />
     </div>
+    {showDialog && <BuyDialog setShowDialog={setShowDialog} selected={selected} />}
   </div>
 }
 
