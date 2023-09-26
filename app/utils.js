@@ -78,3 +78,18 @@ export async function subgraphGet(name, page, addr = "") {
 
 export const rpcUrl = 'https://base.publicnode.com';
 export const httpProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
+
+export function formatCurrentDate(date) {
+  var month = date.getMonth() + 1; // 获取月份并加 1
+  var day = date.getDate(); // 获取日期
+  var hours = date.getHours(); // 获取小时
+  var minutes = date.getMinutes(); // 获取分钟
+
+  // 如果月份、日期、小时或分钟的值小于 10，则在前面添加一个 '0'
+  month = (month < 10 ? "0" : "") + month;
+  day = (day < 10 ? "0" : "") + day;
+  hours = (hours < 10 ? "0" : "") + hours;
+  minutes = (minutes < 10 ? "0" : "") + minutes;
+
+  return month + "-" + day + " " + hours + ":" + minutes;
+}

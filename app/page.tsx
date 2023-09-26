@@ -17,7 +17,7 @@ import { SC_ABIS, SC_ADDR } from "./config";
 import Script from 'next/script';
 
 import dynamic from 'next/dynamic';
-import { subgraphGet } from './utils';
+import { formatCurrentDate, subgraphGet } from './utils';
 
 const Assets = dynamic(() => import('./assets'), {
   ssr: false  // This will make the component only be rendered on client side
@@ -227,10 +227,7 @@ const PriceChart = (props: any) => {
             props.chart.length > 0
               ? props.chart
                   .map((item: any) => ({
-                    name: new Date(item.blockTimestamp * 1000)
-                      .toLocaleString()
-                      .split(",")[0]
-                      .trim(),
+                    name: formatCurrentDate(new Date(item.blockTimestamp * 1000)),
                     price: Number((item.ethAmount / 1e18).toFixed(8)),
                   }))
                   .reverse()
