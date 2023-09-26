@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocalStorage } from 'usehooks-ts'
 import {ethers} from 'ethers';
 import { SC_ABIS, SC_ADDR } from "./config";
-import { subgraphGet } from './utils';
+import { httpProvider, subgraphGet } from './utils';
 
 
 function Row(props) {
@@ -20,10 +20,7 @@ function Row(props) {
           return;
         }
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const provider = new ethers.providers.Web3Provider(
-          window.ethereum
-        );
-        const contract = new ethers.Contract(SC_ADDR, SC_ABIS, provider);
+        const contract = new ethers.Contract(SC_ADDR, SC_ABIS, httpProvider);
         let _price = await contract.getSellPriceAfterFee(props.item.share, 1);
         let _supply = await contract.sharesSupply(props.item.share);
         let _holding = await contract.sharesBalance(props.item.share, accounts[0]);

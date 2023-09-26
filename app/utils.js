@@ -1,4 +1,5 @@
 import axios from "axios";
+import { ethers } from "ethers";
 
 export async function subgraphGet(name, page, addr = "") {
   // 定义查询URL
@@ -74,3 +75,6 @@ export async function subgraphGet(name, page, addr = "") {
   // 使用axios.post发送查询
   return await axios.post(url, { query });
 }
+
+export const rpcUrl = 'https://base.publicnode.com';
+export const httpProvider = new ethers.providers.JsonRpcProvider(rpcUrl);

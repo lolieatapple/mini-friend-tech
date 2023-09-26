@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { ethers } from "ethers";
 import { SC_ABIS, SC_ADDR } from "./config";
 import { useLocalStorage } from 'usehooks-ts'
+import { httpProvider } from "./utils";
 
 export default function BuyDialog(props: any) {
   const [quantity, setQuantity] = useState("1");
@@ -23,24 +24,13 @@ export default function BuyDialog(props: any) {
           params: [{ chainId: "0x2105" }],
         })
         .then(() => {
-          // get account
-          (window as any).ethereum
-            .request({ method: "eth_requestAccounts" })
-            .then((accounts: string[]) => {
-              console.log("accounts", accounts);
-              // get balance
-              const provider = new ethers.providers.Web3Provider(
-                (window as any).ethereum
-              );
-              const contract = new ethers.Contract(SC_ADDR, SC_ABIS, provider);
-              console.log("call", props.selected, quantity);
-              contract
-                .getBuyPriceAfterFee(props.selected, quantity)
-                .then((ret: any) => {
-                  console.log('price', ret);
-                  setPrice(Number((ret / 1e18).toFixed(8)).toString());
-                })
-                .catch(console.error);
+          const contract = new ethers.Contract(SC_ADDR, SC_ABIS, httpProvider);
+          console.log("call", props.selected, quantity);
+          contract
+            .getBuyPriceAfterFee(props.selected, quantity)
+            .then((ret: any) => {
+              console.log('price', ret);
+              setPrice(Number((ret / 1e18).toFixed(8)).toString());
             })
             .catch(console.error);
         })
