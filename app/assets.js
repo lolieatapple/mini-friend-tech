@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocalStorage } from 'usehooks-ts'
 import {ethers} from 'ethers';
 import { SC_ABIS, SC_ADDR } from "./config";
-import { subgraphGet } from './page';
+import { subgraphGet } from './utils';
 
 
 function Row(props) {
