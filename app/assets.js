@@ -119,7 +119,17 @@ export default function Assets(props) {
   
   return <div className="p-4 border rounded shadow mb-4">
     <div className="flex justify-between items-center mb-2">
-      <h2 className="text-lg font-semibold">My Assets</h2>
+      <h2 className="text-lg font-semibold">My Assets
+      <button onClick={()=>{
+        let addr = prompt("Please input address");
+        let price = prompt("Please input buy price");
+        let time = Date.now();
+        if (addr && price) {
+          // add to history 
+          setHistory([...history, {share: addr, buyPrice: price, time}]);
+        }
+      }}>+</button>
+      </h2>
       <span className="text-gray-500 text-sm self-center">
         (Click address for Chart)
       </span>
