@@ -682,10 +682,16 @@ async function subgraphGet(name: string, page: number, addr: string = "") {
     case "top":
       query = `
       {
-        trades(orderBy: ethAmount, orderDirection: desc, first: 100) {
+        trades(
+          orderBy: ethAmount,
+          orderDirection: desc,
+          first: 100,
+          where: {blockTimestamp_gte: ${parseInt((Date.now()/1000 - 3600*24*3).toString())}}
+        ) {
           id
           subject
           ethAmount
+          blockTimestamp
         }
       }
       `;
