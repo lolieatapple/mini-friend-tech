@@ -108,6 +108,7 @@ export default function BuyDialog(props: any) {
                 alert("Transaction sent, please wait for confirmation");
               } catch (error) {
                 console.error(error);
+                alert("Failed: " + (error as any).message);
               }
             }}
           >

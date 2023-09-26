@@ -107,6 +107,7 @@ function Row(props) {
           alert("Transaction sent, please wait for confirmation");
         } catch (error) {
           console.error(error);
+          alert("Failed: " + error.message);
         }
       }}
     >
