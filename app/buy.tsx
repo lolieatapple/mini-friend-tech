@@ -37,6 +37,7 @@ export default function BuyDialog(props: any) {
               contract
                 .getBuyPriceAfterFee(props.selected, quantity)
                 .then((ret: any) => {
+                  console.log('price', ret);
                   setPrice(Number((ret / 1e18).toFixed(8)).toString());
                 })
                 .catch(console.error);
