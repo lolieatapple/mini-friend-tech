@@ -9,7 +9,7 @@ export async function subgraphGet(name, page, addr = "") {
     case "history":
       query = `
       {
-        trades(orderBy: blockNumber, orderDirection: desc, first: 50, skip: ${
+        trades(orderBy: blockNumber, orderDirection: desc, first: 300, skip: ${
           page * 50
         }) {
           id

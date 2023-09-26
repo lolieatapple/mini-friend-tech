@@ -118,7 +118,7 @@ const Header = (props: any) => {
 const TopUsers = (props: any) => (
   <div className="p-4 border rounded shadow">
     <div className="flex justify-between items-center mb-2">
-      <h2 className="text-lg font-semibold">Top 50 Users (24hrs)</h2>
+      <h2 className="text-lg font-semibold">Top 100 Users (24hrs)</h2>
       <span className="text-gray-500 text-sm self-center">
         (Click for Chart)
       </span>
