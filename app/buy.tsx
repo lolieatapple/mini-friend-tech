@@ -94,11 +94,6 @@ export default function BuyDialog(props: any) {
                 const signer = provider.getSigner();
                 // get contract
                 const contract = new ethers.Contract(SC_ADDR, SC_ABIS, signer);
-                console.log(
-                  "price",
-                  price,
-                  ethers.utils.parseEther(price).toNumber()
-                );
                 // call buyFriend
                 let tx = await contract.buyShares(props.selected, quantity, {
                   value: ethers.utils.parseEther(price),
