@@ -346,6 +346,7 @@ const TradeHistory = (props: any) => (
             <th className="p-2 text-left">Owner</th>
             <th className="p-2 text-left">Trader</th>
             <th className="p-2 text-left">Price (ETH)</th>
+            <th className="p-2 text-left">Supply</th>
             <th className="p-2 text-left">TxHash</th>
             <th className="p-2 text-left">Operation</th>
           </tr>
@@ -412,6 +413,9 @@ const TradeHistory = (props: any) => (
               </td>
               <td className="p-2 md:table-cell text-left">
                 <div>{Number((item.ethAmount / 1e18).toFixed(8))}</div>
+              </td>
+              <td className="p-2 md:table-cell text-left">
+                <div>{item.supply}</div>
               </td>
               <td className="p-2 md:table-cell text-left">
                 <a

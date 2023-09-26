@@ -19,6 +19,7 @@ export async function subgraphGet(name, page, addr = "") {
           ethAmount
           blockTimestamp
           transactionHash
+          supply
         }
       }
       `;
