@@ -3,6 +3,7 @@ import { useLocalStorage } from 'usehooks-ts'
 import {ethers} from 'ethers';
 import { SC_ABIS, SC_ADDR } from "./config";
 import { httpProvider, subgraphGet } from './utils';
+import SellDialog from './sell';
 
 
 function Row(props) {
@@ -69,43 +70,8 @@ function Row(props) {
     <button
       className="bg-blue-500 text-white px-2 py-1 rounded"
       onClick={async () => {
-        if (!window.ethereum) {
-          alert("Please install MetaMask first");
-          return;
-        }
-
-        try {
-          // get accounts
-          await window.ethereum.request({
-            method: "eth_requestAccounts",
-          });
-          await window.ethereum.request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: "0x2105" }],
-          });
-          // switch to base mainnet
-          // get signer
-          const provider = new ethers.providers.Web3Provider(
-            window.ethereum
-          );
-          const signer = provider.getSigner();
-          // get contract
-          const contract = new ethers.Contract(SC_ADDR, SC_ABIS, signer);
-          // call buyFriend
-          let tx = await contract.sellShares(props.item.share, holding);
-          console.log("tx", tx);
-
-          // remove from history
-          let _history = history.filter((item) => {
-            return item.share !== props.item.share;
-          });
-          setHistory(_history);
-          
-          alert("Transaction sent, please wait for confirmation");
-        } catch (error) {
-          console.error(error);
-          alert("Failed: " + error.message);
-        }
+        props.setSell(props.item.share)
+        props.setShowDialog(true);
       }}
     >
       Sell
@@ -130,6 +96,8 @@ function Row(props) {
 
 export default function Assets(props) {
   const [history, setHistory] = useLocalStorage('buyHistory', []);
+  const [showDialog, setShowDialog] = useState(false);
+  const [sell, setSell] = useState('');
   
   return <div className="p-4 border rounded shadow mb-4">
     <div className="flex justify-between items-center mb-2">
@@ -168,11 +136,17 @@ export default function Assets(props) {
               return <Row key={index} item={item}
                 setChartLoading={props.setChartLoading}
                 setChart={props.setChart}
-                setSelected={props.setSelected} />
+                setSelected={props.setSelected}
+                setShowDialog={setShowDialog}
+                setSell={setSell}
+              />
             })
           }
         </tbody>
       </table>
     </div>
+    {showDialog && (
+        <SellDialog setShowDialog={setShowDialog} selected={sell} />
+      )}
   </div>
 }

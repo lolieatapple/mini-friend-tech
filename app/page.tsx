@@ -190,8 +190,8 @@ const PriceChart = (props: any) => {
     <div className="p-4 border rounded shadow relative">
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-lg font-semibold">Price Chart</h2>
+        {props.selected}
         <span className="text-gray-500 text-sm self-center">
-          {props.selected}&nbsp;
           {props.selected && (
             <button
               className="bg-blue-500 text-white px-2 py-1 rounded"
