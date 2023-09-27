@@ -234,52 +234,68 @@ const PriceChart = (props: any) => {
           (Click on Address to See Detail Information)
         </span>
       </div>
-
-      <div className="flex flex-col items-center p-4 border rounded-md shadow-md ml-4 mr-4 mb-2">
-        <div className="flex flex-row justify-between w-full mb-3">
-          <div className="flex items-center">
-            <span className="mr-2">Address:</span>
-            {props.selected}
-          </div>
-          <div className="flex items-center">
-            <span className="mr-2">Twitter:</span>
-            {props.selected && <Twitter address={props.selected} />}
-          </div>
-        </div>
-
-        <div className="flex flex-row justify-between w-full mb-3">
-          <div className="flex items-center">
-            <span className="mr-2">Holder Count:</span>
-            <span>{holder}</span>
-          </div>
-          <div className="flex items-center">
-            <span className="mr-2">Share Supply:</span>
-            <span>{supply}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-row justify-between w-full mb-0">
-          <div className="flex items-center">
-            <span className="mr-2">Price:</span>
-            <span>{price}</span>
-          </div>
-          {props.selected && (
-            <div>
-              <button
-                className={`bg-blue-500 pl-5 pr-5 text-white rounded ${
-                  isMobile ? "px-3 py-2" : "px-2 py-1"
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  props.setShowDialog(true);
-                }}
+      {props.selected && (
+        <div className="flex flex-col items-center p-4 border rounded-md shadow-md ml-4 mr-4 mb-2">
+          <div
+            className={`flex ${
+              isMobile ? "flex-col" : "flex-row"
+            } justify-between w-full mb-3`}
+          >
+            <div className="flex items-center">
+              <span className="mr-2">Address:</span>
+              {isMobile ? toShortAddress(props.selected) : props.selected}&nbsp;
+              <a
+                href={`https://basescan.org/address/${props.selected}`}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                Buy
-              </button>
+                🔗
+              </a>
             </div>
-          )}
+            <div className="flex items-center">
+              <span className="mr-2">Twitter:</span>
+              {props.selected && <Twitter address={props.selected} />}
+            </div>
+          </div>
+
+          <div
+            className={`flex ${
+              isMobile ? "flex-col" : "flex-row"
+            } justify-between w-full mb-3`}
+          >
+            <div className="flex items-center">
+              <span className="mr-2">Holder Count:</span>
+              <span>{holder}</span>
+            </div>
+            <div className="flex items-center">
+              <span className="mr-2">Share Supply:</span>
+              <span>{supply}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-row justify-between w-full mb-0">
+            <div className="flex items-center">
+              <span className="mr-2">Price:</span>
+              <span>{price}</span>
+            </div>
+            {props.selected && (
+              <div>
+                <button
+                  className={`bg-blue-500 pl-5 pr-5 text-white rounded ${
+                    isMobile ? "px-3 py-2" : "px-2 py-1"
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.setShowDialog(true);
+                  }}
+                >
+                  Buy
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {props.loading && (
         <div
@@ -294,10 +310,11 @@ const PriceChart = (props: any) => {
             width: isMobile ? "30px" : "50px",
             height: isMobile ? "30px" : "50px",
             animation: "spin 2s linear infinite",
+            zIndex: 100,
           }}
         />
       )}
-      <ResponsiveContainer width="100%" height={250}>
+      <ResponsiveContainer width={isMobile ? 350 : "100%"} height={250}>
         <AreaChart
           data={
             props.chart.length > 0
@@ -335,13 +352,13 @@ const PriceChart = (props: any) => {
           />
           <XAxis
             dataKey="name"
-            tickCount={isMobile ? 3 : undefined}
-            fontSize={isMobile ? 10 : undefined}
+            tickCount={3}
+            fontSize={10}
           />
           <YAxis
             domain={["auto", (dataMax: any) => dataMax + 0.1 * dataMax]}
-            tickCount={isMobile ? 3 : undefined}
-            fontSize={isMobile ? 10 : undefined}
+            tickCount={3}
+            fontSize={10}
           />
           <Tooltip />
           <Area
@@ -427,7 +444,7 @@ const TradeHistory = (props: any) => {
                 }`}
                 key={item.id}
               >
-                <td className="p-2 md:table-cell text-left">
+                <td className="p-2 md:table-cell text-left min-w-[160px]">
                   <div>
                     {new Date(item.blockTimestamp * 1000).toLocaleString()}
                   </div>
@@ -485,7 +502,7 @@ const TradeHistory = (props: any) => {
                 <td className="p-2 md:table-cell text-left">
                   <div>{item.supply}</div>
                 </td>
-                <td className="p-2 md:table-cell text-left">
+                <td className="p-2 md:table-cell text-left min-w-[200px]">
                   <a
                     href={`https://basescan.org/tx/${item.transactionHash}`}
                     target="_blank"
@@ -497,9 +514,9 @@ const TradeHistory = (props: any) => {
                     🔗
                   </a>
                 </td>
-                <td className="p-2 md:table-cell text-left">
+                <td className="p-2 md:table-cell text-left min-w-[220px]">
                   <button
-                    className="bg-blue-500 text-white px-2 py-1 rounded mr-2"
+                    className="bg-blue-400 text-white px-2 py-1 rounded mr-2"
                     onClick={() => {
                       props.setSelected(item.subject);
                       props.setShowDialog(true);
@@ -508,7 +525,7 @@ const TradeHistory = (props: any) => {
                     Buy Owner
                   </button>
                   <button
-                    className="bg-blue-500 text-white px-2 py-1 rounded"
+                    className="bg-green-400 text-white px-2 py-1 rounded"
                     onClick={() => {
                       props.setSelected(item.trader);
                       props.setShowDialog(true);
