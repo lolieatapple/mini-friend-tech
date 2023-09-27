@@ -110,6 +110,20 @@ function Row(props) {
     >
       Sell
     </button>
+    &nbsp;&nbsp;
+    <button
+      className="bg-red-500 text-white px-2 py-1 rounded"
+      onClick={()=>{
+        if (!confirm("Are you sure to remove this record?")) {
+          return;
+        }
+        console.log('remove', props.item.time);
+        let _history = history.filter((item) => {
+          return item.time !== props.item.time;
+        });
+        setHistory(_history);
+      }}
+    >Remove</button>
     </td>
   </tr>
 }
@@ -120,7 +134,8 @@ export default function Assets(props) {
   return <div className="p-4 border rounded shadow mb-4">
     <div className="flex justify-between items-center mb-2">
       <h2 className="text-lg font-semibold">My Assets
-      <button onClick={()=>{
+      <button className="bg-green-500 text-white px-2 py-1 rounded-2xl w-10 h-10 ml-2"
+        onClick={()=>{
         let addr = prompt("Please input address");
         let price = prompt("Please input buy price");
         let time = Date.now();
