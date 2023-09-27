@@ -60,7 +60,7 @@ export async function subgraphGet(name, page, addr = "") {
     case "chart":
       query = `
       {
-        trades(orderBy: blockTimestamp, orderDirection: desc, first: 50, where: {subject: "${addr}"}) {
+        trades(orderBy: blockTimestamp, orderDirection: desc, first: 100, where: {subject: "${addr}"}) {
           ethAmount
           blockTimestamp
         }
@@ -92,4 +92,23 @@ export function formatCurrentDate(date) {
   minutes = (minutes < 10 ? "0" : "") + minutes;
 
   return month + "-" + day + " " + hours + ":" + minutes;
+}
+
+let cache = {};
+
+export async function getTwitterByAddress(address) {
+  // Check if the data for the address is in the cache
+  if (cache[address]) {
+    return cache[address];
+  }
+  // If not in the cache, fetch twitter by address from api 
+  let ret = await axios.get('/api/twitter?address=' + address);
+  // Store the data in the cache
+  cache[address] = ret.data;
+  return ret.data;
+}
+
+
+export function toShortAddress(address) {
+  return address.slice(0, 6) + "..." + address.slice(-4);
 }

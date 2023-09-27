@@ -4,6 +4,8 @@ import React, { useEffect, useState, useRef } from "react";
 import { useMediaQuery } from "react-responsive";
 import {
   LineChart,
+  AreaChart,
+  Area,
   Line,
   XAxis,
   YAxis,
@@ -14,17 +16,23 @@ import {
 import axios from "axios";
 import { ethers } from "ethers";
 import { SC_ABIS, SC_ADDR } from "./config";
-import Script from 'next/script';
+import Script from "next/script";
 
-import dynamic from 'next/dynamic';
-import { formatCurrentDate, subgraphGet } from './utils';
+import dynamic from "next/dynamic";
+import {
+  formatCurrentDate,
+  getTwitterByAddress,
+  subgraphGet,
+  toShortAddress,
+} from "./utils";
+import Twitter from "./twitter";
 
-const Assets = dynamic(() => import('./assets'), {
-  ssr: false  // This will make the component only be rendered on client side
+const Assets = dynamic(() => import("./assets"), {
+  ssr: false, // This will make the component only be rendered on client side
 });
 
-const BuyDialog = dynamic(() => import('./buy'), {
-  ssr: false  // This will make the component only be rendered on client side
+const BuyDialog = dynamic(() => import("./buy"), {
+  ssr: false, // This will make the component only be rendered on client side
 });
 
 // 示例数据
@@ -61,6 +69,21 @@ const Header = (props: any) => {
       onSearch();
     }
   }, [search]);
+
+  useEffect(() => {
+    (window as any).ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: "0x2105" }],
+    });
+    // get account
+    (window as any).ethereum
+      .request({
+        method: "eth_accounts",
+      })
+      .then((accounts: any) => {
+        setAddress(accounts[0]);
+      });
+  }, []);
 
   return (
     <div className="flex flex-wrap justify-between items-center p-4 bg-blue-500 text-white">
@@ -185,26 +208,79 @@ const TopUsers = (props: any) => (
 // Price Chart Component
 const PriceChart = (props: any) => {
   const isMobile = useMediaQuery({ query: "(max-width: 767px)" });
+  const [holder, setHolder] = useState<any>(0);
+  const [supply, setSupply] = useState<any>(0);
+  const [price, setPrice] = useState<any>(0);
+  useEffect(() => {
+    if (!props.selected) {
+      return;
+    }
+    getTwitterByAddress(props.selected)
+      .then((ret) => {
+        setHolder(ret.holderCount);
+        setSupply(ret.shareSupply);
+        setPrice(ret.displayPrice / 1e18);
+      })
+      .catch(console.error);
+  }, [props.selected]);
 
   return (
-    <div className="p-4 border rounded shadow relative">
-      <div className="flex justify-between items-center mb-2">
-        <h2 className="text-lg font-semibold">Price Chart</h2>
-        {props.selected}
+    <div className={`p-4 border rounded shadow relative md:p-2 p-4`}>
+      <div className="flex justify-between items-center mb-2 flex-col md:flex-row">
+        <h2 className={`text-lg font-semibold md:text-base text-lg`}>
+          Account Detail & Price Chart
+        </h2>
         <span className="text-gray-500 text-sm self-center">
-          {props.selected && (
-            <button
-              className="bg-blue-500 text-white px-2 py-1 rounded"
-              onClick={(e) => {
-                e.stopPropagation();
-                props.setShowDialog(true);
-              }}
-            >
-              Buy
-            </button>
-          )}
+          (Click on Address to See Detail Information)
         </span>
       </div>
+
+      <div className="flex flex-col items-center p-4 border rounded-md shadow-md ml-4 mr-4 mb-2">
+        <div className="flex flex-row justify-between w-full mb-3">
+          <div className="flex items-center">
+            <span className="mr-2">Address:</span>
+            {props.selected}
+          </div>
+          <div className="flex items-center">
+            <span className="mr-2">Twitter:</span>
+            {props.selected && <Twitter address={props.selected} />}
+          </div>
+        </div>
+
+        <div className="flex flex-row justify-between w-full mb-3">
+          <div className="flex items-center">
+            <span className="mr-2">Holder Count:</span>
+            <span>{holder}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="mr-2">Share Supply:</span>
+            <span>{supply}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-row justify-between w-full mb-0">
+          <div className="flex items-center">
+            <span className="mr-2">Price:</span>
+            <span>{price}</span>
+          </div>
+          {props.selected && (
+            <div>
+              <button
+                className={`bg-blue-500 pl-5 pr-5 text-white rounded ${
+                  isMobile ? "px-3 py-2" : "px-2 py-1"
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  props.setShowDialog(true);
+                }}
+              >
+                Buy
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {props.loading && (
         <div
           style={{
@@ -215,49 +291,67 @@ const PriceChart = (props: any) => {
             border: "16px solid #100f0f",
             borderTop: "16px solid #3498db",
             borderRadius: "50%",
-            width: "50px",
-            height: "50px",
+            width: isMobile ? "30px" : "50px",
+            height: isMobile ? "30px" : "50px",
             animation: "spin 2s linear infinite",
           }}
         />
       )}
-      <ResponsiveContainer width="100%" height={isMobile ? 200 : 350}>
-        <LineChart
+      <ResponsiveContainer width="100%" height={250}>
+        <AreaChart
           data={
             props.chart.length > 0
               ? props.chart
                   .map((item: any) => ({
-                    name: formatCurrentDate(new Date(item.blockTimestamp * 1000)),
+                    name: formatCurrentDate(
+                      new Date(item.blockTimestamp * 1000)
+                    ),
                     price: Number((item.ethAmount / 1e18).toFixed(8)),
                   }))
                   .reverse()
               : data
           }
           margin={{
-            top: 5,
-            right: 10,
-            left: isMobile ? 0 : 10,
+            top: 10,
+            right: 20,
+            left: 0,
             bottom: 5,
           }}
         >
-          <CartesianGrid strokeDasharray={isMobile ? "1 1" : "3 3"} />
+          <defs>
+            <linearGradient id="gradientFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#f6e1f7" />
+              <stop offset="100%" stopColor="#ffffff" />
+            </linearGradient>
+            <linearGradient id="gradientFill2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#84d8d7" />
+              <stop offset="100%" stopColor="#d1f5f4" />
+            </linearGradient>
+          </defs>
+          <CartesianGrid
+            fill="url(#gradientFill)"
+            horizontal={false}
+            vertical={false}
+          />
           <XAxis
             dataKey="name"
             tickCount={isMobile ? 3 : undefined}
             fontSize={isMobile ? 10 : undefined}
           />
           <YAxis
+            domain={["auto", (dataMax: any) => dataMax + 0.1 * dataMax]}
             tickCount={isMobile ? 3 : undefined}
             fontSize={isMobile ? 10 : undefined}
           />
           <Tooltip />
-          <Line
+          <Area
             type="monotone"
             dataKey="price"
-            stroke="#8884d8"
-            activeDot={{ r: 8 }}
+            stroke="#84d8d7"
+            fill="url(#gradientFill2)"
+            activeDot={{ r: 5 }}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
 
       <style jsx>{`
@@ -274,186 +368,163 @@ const PriceChart = (props: any) => {
   );
 };
 
-// Newers Component
-const Newers = (props: any) => (
-  <div className="p-4 border rounded shadow">
-    <div className="flex justify-between items-center mb-2">
-      <h2 className="text-lg font-semibold">New Users</h2>
-      {/* <span className="text-gray-500 text-sm self-center">(Click for Chart)</span> */}
-    </div>
-    <table className="min-w-full border rounded shadow text-xs">
-      <thead>
-        <tr className="border-gray-300 border-b">
-          <th className="p-1 text-center">Address</th>
-          <th className="p-1 text-center">Operation</th>
-        </tr>
-      </thead>
-      <tbody>
-        {props.newers.map((item: any, index: number) => (
-          <tr
-            className="h-8 border-gray-300 border-b cursor-pointer hover:bg-gray-200"
-            onClick={() => console.log("Row clicked")}
-            key={item.id}
-          >
-            <td className="p-1 text-center">
-              {item.subject.slice(0, 6) + "..." + item.subject.slice(-4)}&nbsp;
-              <a
-                href={`https://basescan.org/address/${item.subject}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                🔗
-              </a>
-            </td>
-            <td className="p-1 text-center">
-              <button
-                className="bg-blue-500 text-white px-2 py-1 rounded"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  console.log("Buy button clicked");
-                  props.setSelected(item.subject);
-                  props.setShowDialog(true);
-                }}
-              >
-                Buy
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
-
 // Trade History Component
-const TradeHistory = (props: any) => (
-  <div className="p-4 border rounded shadow">
-    <div className="flex justify-between items-center mb-2">
-      <h2 className="text-lg font-semibold">Trade History</h2>
-      <span className="text-gray-500 text-sm self-center">
-        (Click address for Chart)
-      </span>
-    </div>
-    <div className="overflow-x-auto">
-      <table className="min-w-full border rounded shadow text-xs md:table">
-        <thead className="md:table-header-group">
-          <tr className="border-gray-300 border-b">
-            <th className="p-2 text-left">Time</th>
-            <th className="p-2 text-left">Type</th>
-            <th className="p-2 text-left">Owner</th>
-            <th className="p-2 text-left">Trader</th>
-            <th className="p-2 text-left">Price (ETH)</th>
-            <th className="p-2 text-left">Supply</th>
-            <th className="p-2 text-left">TxHash</th>
-            <th className="p-2 text-left">Operation</th>
-          </tr>
-        </thead>
-        <tbody>
-          {props.history.map((item: any, index: number) => (
-            <tr
-              className={`border-gray-300 border-b md:table-row hover:bg-gray-200 ${
-                item.isBuy ? "bg-green-100" : "bg-red-100"
-              }`}
-              key={item.id}
-            >
-              <td className="p-2 md:table-cell text-left">
-                <div>
-                  {new Date(item.blockTimestamp * 1000).toLocaleString()}
-                </div>
-              </td>
-              <td className="p-2 md:table-cell text-left">
-                <div>{item.isBuy ? "Buy" : "Sell"}</div>
-              </td>
-              <td
-                className="p-2 md:table-cell text-left cursor-pointer"
-                onClick={async () => {
-                  props.setChartLoading(true);
-                  console.log("Row clicked", item.subject);
-                  const ret = await subgraphGet("chart", 0, item.subject);
-                  console.log("chart", ret.data.data.trades);
-                  props.setChart(ret.data.data.trades);
-                  props.setSelected(item.subject);
-                  props.setChartLoading(false);
-                }}
-              >
-                {item.subject.slice(0, 6) + "..." + item.subject.slice(-4)}
-                &nbsp;
-                <a
-                  href={`https://basescan.org/address/${item.subject}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  🔗
-                </a>
-              </td>
-              <td
-                className="p-2 md:table-cell text-left cursor-pointer"
-                onClick={async () => {
-                  props.setChartLoading(true);
-                  console.log("Row clicked", item.trader);
-                  const ret = await subgraphGet("chart", 0, item.trader);
-                  console.log("chart", ret.data.data.trades);
-                  props.setChart(ret.data.data.trades);
-                  props.setSelected(item.trader);
-                  props.setChartLoading(false);
-                }}
-              >
-                {item.trader.slice(0, 6) + "..." + item.trader.slice(-4)}
-                &nbsp;
-                <a
-                  href={`https://basescan.org/address/${item.trader}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  🔗
-                </a>
-              </td>
-              <td className="p-2 md:table-cell text-left">
-                <div>{Number((item.ethAmount / 1e18).toFixed(8))}</div>
-              </td>
-              <td className="p-2 md:table-cell text-left">
-                <div>{item.supply}</div>
-              </td>
-              <td className="p-2 md:table-cell text-left">
-                <a
-                  href={`https://basescan.org/tx/${item.transactionHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {item.transactionHash.slice(0, 12) +
-                    "..." +
-                    item.transactionHash.slice(-8)}{" "}
-                  🔗
-                </a>
-              </td>
-              <td className="p-2 md:table-cell text-left">
-                <button
-                  className="bg-blue-500 text-white px-2 py-1 rounded mr-2"
-                  onClick={() => {
-                    props.setSelected(item.subject);
-                    props.setShowDialog(true);
-                  }}
-                >
-                  Buy Owner
-                </button>
-                <button
-                  className="bg-blue-500 text-white px-2 py-1 rounded"
-                  onClick={() => {
-                    props.setSelected(item.trader);
-                    props.setShowDialog(true);
-                  }}
-                >
-                  Buy Trader
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
+const TradeHistory = (props: any) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<any>();
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // 当元素进入视窗时，设置 isVisible 为 true
+        setIsVisible(entry.isIntersecting);
+      },
+      {
+        // 当元素与视窗相交至 50% 时，触发回调
+        threshold: 0.5,
+      }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    // 清理函数，在组件卸载时取消观察
+    return () => {
+      if (ref.current) {
+        observer.unobserve(ref.current);
+      }
+    };
+  }, [ref]);
+
+  return (
+    <div className="p-4 border rounded shadow">
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-lg font-semibold">Trade History</h2>
+        <span className="text-gray-500 text-sm self-center">
+          (Click address for Chart)
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full border rounded shadow text-xs md:table">
+          <thead className="md:table-header-group">
+            <tr className="border-gray-300 border-b">
+              <th className="p-2 text-left">Time</th>
+              <th className="p-2 text-left">Type</th>
+              <th className="p-2 text-left">Owner</th>
+              <th className="p-2 text-left">Trader</th>
+              <th className="p-2 text-left">Price (ETH)</th>
+              <th className="p-2 text-left">Supply</th>
+              <th className="p-2 text-left">TxHash</th>
+              <th className="p-2 text-left">Operation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {props.history.map((item: any, index: number) => (
+              <tr
+                className={`border-gray-300 border-b md:table-row hover:bg-gray-200 ${
+                  item.isBuy ? "bg-green-100" : "bg-red-100"
+                }`}
+                key={item.id}
+              >
+                <td className="p-2 md:table-cell text-left">
+                  <div>
+                    {new Date(item.blockTimestamp * 1000).toLocaleString()}
+                  </div>
+                </td>
+                <td className="p-2 md:table-cell text-left">
+                  <div>{item.isBuy ? "Buy" : "Sell"}</div>
+                </td>
+                <td
+                  className="p-2 md:table-cell text-left cursor-pointer"
+                  onClick={async () => {
+                    props.setChartLoading(true);
+                    console.log("Row clicked", item.subject);
+                    const ret = await subgraphGet("chart", 0, item.subject);
+                    console.log("chart", ret.data.data.trades);
+                    props.setChart(ret.data.data.trades);
+                    props.setSelected(item.subject);
+                    props.setChartLoading(false);
+                  }}
+                >
+                  {toShortAddress(item.subject)}
+                  &nbsp;
+                  <a
+                    href={`https://basescan.org/address/${item.subject}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    🔗
+                  </a>
+                </td>
+                <td
+                  className="p-2 md:table-cell text-left cursor-pointer"
+                  onClick={async () => {
+                    props.setChartLoading(true);
+                    console.log("Row clicked", item.trader);
+                    const ret = await subgraphGet("chart", 0, item.trader);
+                    console.log("chart", ret.data.data.trades);
+                    props.setChart(ret.data.data.trades);
+                    props.setSelected(item.trader);
+                    props.setChartLoading(false);
+                  }}
+                >
+                  {item.trader.slice(0, 6) + "..." + item.trader.slice(-4)}
+                  &nbsp;
+                  <a
+                    href={`https://basescan.org/address/${item.trader}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    🔗
+                  </a>
+                </td>
+                <td className="p-2 md:table-cell text-left">
+                  <div>{Number((item.ethAmount / 1e18).toFixed(8))}</div>
+                </td>
+                <td className="p-2 md:table-cell text-left">
+                  <div>{item.supply}</div>
+                </td>
+                <td className="p-2 md:table-cell text-left">
+                  <a
+                    href={`https://basescan.org/tx/${item.transactionHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {item.transactionHash.slice(0, 12) +
+                      "..." +
+                      item.transactionHash.slice(-8)}{" "}
+                    🔗
+                  </a>
+                </td>
+                <td className="p-2 md:table-cell text-left">
+                  <button
+                    className="bg-blue-500 text-white px-2 py-1 rounded mr-2"
+                    onClick={() => {
+                      props.setSelected(item.subject);
+                      props.setShowDialog(true);
+                    }}
+                  >
+                    Buy Owner
+                  </button>
+                  <button
+                    className="bg-blue-500 text-white px-2 py-1 rounded"
+                    onClick={() => {
+                      props.setSelected(item.trader);
+                      props.setShowDialog(true);
+                    }}
+                  >
+                    Buy Trader
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 // Main Home Component
 const Home = () => {
@@ -483,13 +554,6 @@ const Home = () => {
           setTop(ret.data.data.trades);
         })
         .catch(console.error);
-
-      subgraphGet("newers", 0)
-        .then((ret) => {
-          console.log("flush newers", ret.data.data.trades.length);
-          setNewers(ret.data.data.trades);
-        })
-        .catch(console.error);
     };
 
     // 首次渲染时立即获取数据
@@ -509,7 +573,7 @@ const Home = () => {
         setSelected={setSelected}
       />
       <div className="container mx-auto p-4">
-        <div className="grid md:grid-cols-[1fr,2fr,1fr] gap-4 mb-4">
+        <div className="grid md:grid-cols-[1fr,2fr] gap-4 mb-4">
           <TopUsers
             top={top}
             setChart={setChart}
@@ -523,15 +587,12 @@ const Home = () => {
             selected={selected}
             setShowDialog={setShowDialog}
           />
-          <Newers
-            newers={newers}
-            setShowDialog={setShowDialog}
-            setSelected={setSelected}
-          />
         </div>
-        <Assets setChartLoading={setChartLoading}
+        <Assets
+          setChartLoading={setChartLoading}
           setChart={setChart}
-          setSelected={setSelected} />
+          setSelected={setSelected}
+        />
         <TradeHistory
           history={history}
           setChartLoading={setChartLoading}
@@ -544,20 +605,19 @@ const Home = () => {
         <BuyDialog setShowDialog={setShowDialog} selected={selected} />
       )}
       <div>
-      <Script src="https://www.googletagmanager.com/gtag/js?id=G_WB0CNNCQCM" />
-      <Script id="google-analytics">
-        {`
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G_WB0CNNCQCM" />
+        <Script id="google-analytics">
+          {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
  
           gtag('config', 'G-WB0CNNCQCM');
         `}
-      </Script>
-    </div>
+        </Script>
+      </div>
     </div>
   );
 };
-
 
 export default Home;

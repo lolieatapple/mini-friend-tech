@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useLocalStorage } from 'usehooks-ts'
 import {ethers} from 'ethers';
 import { SC_ABIS, SC_ADDR } from "./config";
-import { httpProvider, subgraphGet } from './utils';
+import { httpProvider, subgraphGet, toShortAddress } from './utils';
 import SellDialog from './sell';
+import Twitter from './twitter';
 
 
 function Row(props) {
@@ -11,6 +12,8 @@ function Row(props) {
   const [supply, setSupply] = useState('loading');
   const [holding, setHolding] = useState('loading');
   const [history, setHistory] = useLocalStorage('buyHistory', []);
+
+
 
 
   useEffect(() => {
@@ -43,15 +46,17 @@ function Row(props) {
   }, []);
 
   return <tr className={`border-b border-gray-300 ${Number(props.item.buyPrice) < Number(currentPrice) ? "bg-green-100" : "bg-red-100"}`}>
-    <td className="p-2">{props.item.time ? new Date(props.item.time).toLocaleString() : new Date().toLocaleString()}</td>
-    <td className="p-2 cursor-pointer" onClick={async ()=>{
+    <td className="p-2 min-w-[160px]">{props.item.time ? new Date(props.item.time).toLocaleString() : new Date().toLocaleString()}</td>
+    <td className="p-2 cursor-pointer min-w-[260px]" onClick={async ()=>{
       props.setChartLoading(true);
       const ret = await subgraphGet("chart", 0, props.item.share);
       console.log("chart", ret.data.data.trades);
       props.setChart(ret.data.data.trades);
       props.setSelected(props.item.share);
       props.setChartLoading(false);
-    }}>{props.item.share}
+    }}>
+      <div className='flex items-center'>
+      {toShortAddress(props.item.share)}
     &nbsp;
     <a
       href={`https://basescan.org/address/${props.item.subject}`}
@@ -60,13 +65,14 @@ function Row(props) {
     >
       🔗
     </a>
-    
+    <Twitter address={props.item.share} />
+    </div>
     </td>
     <td className="p-2">{supply}</td>
     <td className="p-2">{holding}</td>
     <td className="p-2">{props.item.buyPrice}</td>
     <td className="p-2">{currentPrice}</td>
-    <td className="p-2">
+    <td className="p-2 min-w-[120px]">
     <button
       className="bg-blue-500 text-white px-2 py-1 rounded"
       onClick={async () => {
@@ -102,7 +108,7 @@ export default function Assets(props) {
   return <div className="p-4 border rounded shadow mb-4">
     <div className="flex justify-between items-center mb-2">
       <h2 className="text-lg font-semibold">My Assets
-      <button className="bg-green-500 text-white px-2 py-1 rounded-2xl w-10 h-10 ml-2"
+      <button className="bg-green-500 text-white rounded-full w-8 h-8 ml-2"
         onClick={()=>{
         let addr = prompt("Please input address");
         let price = prompt("Please input buy price");
