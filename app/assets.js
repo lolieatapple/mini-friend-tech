@@ -112,7 +112,7 @@ function Row(props) {
     </button>
     &nbsp;&nbsp;
     <button
-      className="bg-red-500 text-white px-2 py-1 rounded"
+      className="bg-red-400 text-white px-2 py-1 rounded"
       onClick={()=>{
         if (!confirm("Are you sure to remove this record?")) {
           return;
@@ -123,7 +123,7 @@ function Row(props) {
         });
         setHistory(_history);
       }}
-    >Remove</button>
+    >Del</button>
     </td>
   </tr>
 }
