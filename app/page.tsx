@@ -314,7 +314,7 @@ const PriceChart = (props: any) => {
           }}
         />
       )}
-      <ResponsiveContainer width={isMobile ? 350 : "100%"} height={250}>
+      <ResponsiveContainer width={isMobile ? 350 : "100%"} height={props.selected ? 250 : 350}>
         <AreaChart
           data={
             props.chart.length > 0
